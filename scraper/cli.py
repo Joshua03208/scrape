@@ -66,6 +66,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_inspect(args: argparse.Namespace) -> int:
+    from .inspect import inspect_url
+    inspect_url(args.url, use_playwright=args.playwright)
+    return 0
+
+
 def cmd_export(args: argparse.Namespace) -> int:
     with Storage(args.db) as storage:
         if args.format == "csv":
@@ -85,6 +91,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_run = sub.add_parser("run", help="Crawl one site file or a folder of them")
     p_run.add_argument("config", help="Path to a site .yaml or a folder of them")
     p_run.set_defaults(func=cmd_run)
+
+    p_ins = sub.add_parser(
+        "inspect", help="Inspect a live URL to discover selectors for a config"
+    )
+    p_ins.add_argument("url", help="URL to inspect (e.g. a search or product page)")
+    p_ins.add_argument(
+        "--playwright", action="store_true",
+        help="Use a real browser (for JS-heavy or bot-protected sites)",
+    )
+    p_ins.set_defaults(func=cmd_inspect)
 
     p_exp = sub.add_parser("export", help="Export collected data")
     p_exp.add_argument("--format", choices=["csv", "json"], default="csv")

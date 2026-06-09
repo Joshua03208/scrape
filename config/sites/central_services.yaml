@@ -1,0 +1,59 @@
+# Central Services UK -- runs on OpenCart (URLs look like
+# index.php?route=product/search&search=...). This config seeds the crawl with
+# the part-number-prefix searches that surface lots of spares, then follows
+# each product page and reads the OpenCart "Product Code" (the part number)
+# and price.
+#
+# NOTE: prices here are in GBP (£). The extractor detects the £ symbol
+# automatically. Selectors below target OpenCart's *default* theme -- if this
+# shop uses a custom theme, run:
+#     python -m scraper.cli inspect "https://central-servicesuk.co.uk/index.php?route=product/search&search=133." --playwright
+# and adjust the selectors to match what it prints.
+
+name: central_services
+start_urls:
+  - https://central-servicesuk.co.uk/index.php?route=product/search&search=133.
+  - https://central-servicesuk.co.uk/index.php?route=product/search&search=150.
+  - https://central-servicesuk.co.uk/index.php?route=product/search&search=120.
+  - https://central-servicesuk.co.uk/index.php?route=product/search&search=112.
+allowed_domains:
+  - central-servicesuk.co.uk
+
+# Start with the fast static fetcher. If you get 403s or empty pages, switch to
+# playwright (the site may use bot protection or render via JS).
+fetcher: requests
+max_pages: 3000
+delay_seconds: 1.5
+respect_robots: true
+user_agent: "PartPriceBot/0.1 (+https://yourbusiness.example; you@example.com)"
+
+crawl:
+  # Follow product detail pages and search pagination only.
+  follow_link_patterns:
+    - "route=product/product"
+    - "route=product/search"
+  ignore_link_patterns:
+    - "route=checkout"
+    - "route=account"
+    - "route=product/compare"
+    - "route=affiliate"
+    - "add_to_cart"
+    - "wishlist"
+    - "&sort="
+    - "&limit="
+
+extract:
+  strategy: product_page
+  part_number:
+    # OpenCart shows the part number as "Product Code:" (a.k.a. Model).
+    regex:
+      - "Product Code:\\s*([A-Za-z0-9.\\-/]+)"
+      - "Model:\\s*([A-Za-z0-9.\\-/]+)"
+  price:
+    # Default OpenCart price markup; the first match that contains a £ wins.
+    selectors:
+      - ".product-info .price-new"
+      - ".product-info .price"
+      - "ul.list-unstyled .price-new"
+      - "#product .price"
+      - "h2.price-new"

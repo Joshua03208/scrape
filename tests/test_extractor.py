@@ -5,10 +5,41 @@ from scraper.extractor import Extractor, _clean_price
 
 
 def test_clean_price_variants():
-    assert _clean_price("$1,234.56")[0] == 1234.56
+    amount, _raw, ccy = _clean_price("$1,234.56")
+    assert (amount, ccy) == (1234.56, "USD")
     assert _clean_price("Now only $99")[0] == 99.0
     assert _clean_price("$12.5")[0] == 12.5
+    # UK / EUR symbols are recognised with the right currency code.
+    assert _clean_price("£45.00")[0] == 45.0
+    assert _clean_price("£45.00")[2] == "GBP"
+    assert _clean_price("€10")[2] == "EUR"
     assert _clean_price("no price here") is None
+
+
+def test_opencart_style_product_page():
+    # Mimics OpenCart default markup: Product Code line + GBP price.
+    html = """
+    <html><body>
+      <h1>Triton Heater Tank</h1>
+      <ul class="list-unstyled">
+        <li>Brand: Triton</li>
+        <li>Product Code: 133.456</li>
+        <li>Availability: In Stock</li>
+      </ul>
+      <div class="product-info">
+        <ul class="list-unstyled"><li class="price">&pound;28.75</li></ul>
+      </div>
+    </body></html>
+    """
+    cfg = ExtractConfig(
+        strategy="product_page",
+        part_number=FieldRule(regex=[r"Product Code:\s*([A-Za-z0-9.\-/]+)"]),
+        price=FieldRule(selectors=[".product-info .price"]),
+    )
+    rec = Extractor(cfg).extract("http://x/p", html)[0]
+    assert rec.part_number == "133.456"
+    assert rec.price == 28.75
+    assert rec.currency == "GBP"
 
 
 def test_product_page_selectors():

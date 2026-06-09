@@ -20,10 +20,19 @@ from bs4 import BeautifulSoup, Tag
 
 from .config import ExtractConfig, FieldRule
 
-# Generic money matcher: $1,234.56 / $1234 / 1,234.56 USD-ish.
-_PRICE_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)")
-# A reasonable default part-number shape: letters+digits, dashes allowed.
-_PART_RE = re.compile(r"\b([A-Z0-9]{2,}(?:-[A-Z0-9]+)+|[A-Z]{1,4}\d{3,}[A-Z0-9\-]*)\b")
+# Generic money matcher: handles $ £ € (and GBP/USD/EUR words), e.g.
+# £1,234.56 / $99 / €12.5 / 1,234.56 GBP.
+_AMOUNT = r"(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)"
+_PRICE_RE = re.compile(
+    rf"(?:(?P<sym>[$£€])|(?P<code>\b(?:GBP|USD|EUR)\b))\s?{_AMOUNT}"
+    rf"|{_AMOUNT}\s?(?P<code2>\b(?:GBP|USD|EUR)\b)"
+)
+_SYMBOL_TO_CCY = {"$": "USD", "£": "GBP", "€": "EUR"}
+# A reasonable default part-number shape: letters+digits, dots/dashes allowed
+# (covers OpenCart-style codes like 133.123 as well as AB-123-X).
+_PART_RE = re.compile(
+    r"\b([A-Z0-9]{2,}(?:[.\-][A-Z0-9]+)+|[A-Z]{1,4}\d{3,}[A-Z0-9.\-]*)\b"
+)
 
 
 @dataclass
@@ -35,13 +44,18 @@ class Record:
     raw_price: str = ""
 
 
-def _clean_price(text: str) -> tuple[float, str] | None:
-    """Parse a price string into (amount, raw_match) or None."""
+def _clean_price(text: str, default_currency: str = "USD") -> tuple[float, str, str] | None:
+    """Parse a price string into (amount, raw_match, currency) or None."""
     m = _PRICE_RE.search(text)
     if not m:
         return None
-    amount = float(m.group(1).replace(",", ""))
-    return amount, m.group(0).strip()
+    # The amount is whichever numeric group matched.
+    amount_str = next(g for g in m.groups()[:] if g and any(c.isdigit() for c in g))
+    amount = float(amount_str.replace(",", ""))
+    sym = m.groupdict().get("sym")
+    code = m.groupdict().get("code") or m.groupdict().get("code2")
+    currency = _SYMBOL_TO_CCY.get(sym) if sym else (code or default_currency)
+    return amount, m.group(0).strip(), currency
 
 
 def _field_from_selectors(node: Tag, rule: FieldRule) -> str | None:
@@ -81,7 +95,7 @@ def _find_part_number(node: Tag, page_text: str, rule: FieldRule) -> str | None:
     return m.group(1) if m else None
 
 
-def _find_price(node: Tag, page_text: str, rule: FieldRule) -> tuple[float, str] | None:
+def _find_price(node: Tag, page_text: str, rule: FieldRule) -> tuple[float, str, str] | None:
     val = _field_from_selectors(node, rule)
     if val:
         parsed = _clean_price(val)
@@ -111,8 +125,9 @@ class Extractor:
         price = _find_price(soup, page_text, self.config.price)
         if not part or not price:
             return []
-        amount, raw = price
-        return [Record(url=url, part_number=part, price=amount, raw_price=raw)]
+        amount, raw, currency = price
+        return [Record(url=url, part_number=part, price=amount,
+                       currency=currency, raw_price=raw)]
 
     def _extract_table(self, url: str, soup: BeautifulSoup) -> list[Record]:
         cfg = self.config
@@ -131,8 +146,9 @@ class Extractor:
             parsed = _clean_price(price_el.get_text(" ", strip=True))
             if not part or not parsed:
                 continue
-            amount, raw = parsed
+            amount, raw, currency = parsed
             records.append(
-                Record(url=url, part_number=part, price=amount, raw_price=raw)
+                Record(url=url, part_number=part, price=amount,
+                       currency=currency, raw_price=raw)
             )
         return records
