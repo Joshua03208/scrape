@@ -124,9 +124,20 @@ def _search_form(soup: BeautifulSoup) -> str:
     return "  (no obvious search form found)"
 
 
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
+
+
 def inspect_url(url: str, use_playwright: bool = False) -> None:
-    cfg = SiteConfig(name="inspect", start_urls=[url], allowed_domains=["_"])
-    fetcher = PlaywrightFetcher(cfg) if use_playwright else RequestsFetcher(cfg)
+    # Use a normal browser identity + a visible window so the inspector can get
+    # past the same bot-walls the real crawl does.
+    cfg = SiteConfig(
+        name="inspect", start_urls=[url], allowed_domains=["_"],
+        headless=False, user_agent=_BROWSER_UA,
+    )
+    fetcher = PlaywrightFetcher(cfg, headless=False) if use_playwright else RequestsFetcher(cfg)
     try:
         result = fetcher.fetch(url)
     finally:

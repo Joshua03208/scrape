@@ -106,6 +106,13 @@ def _find_price(node: Tag, page_text: str, rule: FieldRule) -> tuple[float, str,
         parsed = _clean_price(val)
         if parsed:
             return parsed
+    # Last-ditch fallback: scan the whole page, but prefer the first NON-ZERO
+    # amount. This skips things like an empty basket total ("£0.00") that many
+    # shop themes show in the header.
+    for m in _PRICE_RE.finditer(page_text):
+        parsed = _clean_price(m.group(0))
+        if parsed and parsed[0] > 0:
+            return parsed
     return _clean_price(page_text)
 
 

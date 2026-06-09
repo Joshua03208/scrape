@@ -16,6 +16,27 @@ def test_clean_price_variants():
     assert _clean_price("no price here") is None
 
 
+def test_fallback_skips_empty_basket_total():
+    # The header shows an empty basket "£0.00" before the real price. The
+    # fallback should skip the zero and pick the genuine product price.
+    html = """
+    <html><body>
+      <div id="cart"><span id="cart-total">0 item(s) - &pound;0.00</span></div>
+      <h1>Shower Hose</h1>
+      <p>Product Code: 150.221</p>
+      <div class="product-price">&pound;14.99</div>
+    </body></html>
+    """
+    cfg = ExtractConfig(
+        strategy="product_page",
+        part_number=FieldRule(regex=[r"Product Code:\s*([A-Za-z0-9.\-/]+)"]),
+        price=FieldRule(),  # no selector -> exercises the fallback
+    )
+    rec = Extractor(cfg).extract("http://x/p", html)[0]
+    assert rec.part_number == "150.221"
+    assert rec.price == 14.99
+
+
 def test_opencart_style_product_page():
     # Mimics OpenCart default markup: Product Code line + GBP price.
     html = """
