@@ -1,0 +1,51 @@
+# Example: a LOGIN-GATED, JavaScript-heavy dealer portal.
+# Prices only show after signing in, so we use a real browser (Playwright)
+# and a login flow. Credentials come from environment variables (.env), never
+# hard-coded here.
+
+name: example_dealer
+start_urls:
+  - https://dealer.example.com/catalog
+allowed_domains:
+  - dealer.example.com
+
+fetcher: playwright        # real browser: handles JS + keeps the session
+max_pages: 200
+delay_seconds: 2.0
+respect_robots: true
+user_agent: "PartPriceBot/0.1 (+https://yourbusiness.example; you@example.com)"
+
+login:
+  enabled: true
+  url: https://dealer.example.com/login
+  steps:
+    - selector: "#username"
+      action: fill
+      value_env: EXAMPLE_USER     # set in .env
+    - selector: "#password"
+      action: fill
+      value_env: EXAMPLE_PASS
+    - selector: "button[type=submit]"
+      action: click
+  # A selector that only exists once logged in -> confirms login worked.
+  success_selector: ".account-menu"
+
+crawl:
+  follow_link_patterns:
+    - "/catalog/"
+    - "/product/"
+  ignore_link_patterns:
+    - "/logout"
+    - "/cart"
+
+extract:
+  strategy: product_page
+  part_number:
+    selectors:
+      - ".sku"
+      - "[data-part-number]"
+    attribute: data-part-number   # pull the attribute instead of text, if present
+  price:
+    selectors:
+      - ".your-price"
+      - ".dealer-price"

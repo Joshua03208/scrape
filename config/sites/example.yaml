@@ -1,0 +1,43 @@
+# Example: a PUBLIC, mostly-static site where each product has its own page.
+# Copy this file and adapt the selectors/patterns for a real manufacturer.
+
+name: example_public
+start_urls:
+  - https://example.com/products
+allowed_domains:
+  - example.com
+
+fetcher: requests          # static HTML -> fast path
+max_pages: 300
+delay_seconds: 1.0         # be polite; raise if the site is slow/sensitive
+respect_robots: true
+user_agent: "PartPriceBot/0.1 (+https://yourbusiness.example; you@example.com)"
+
+crawl:
+  # Only wander into product/catalog pages; skip cart, account, etc.
+  follow_link_patterns:
+    - "/products/"
+    - "/catalog/"
+  ignore_link_patterns:
+    - "/cart"
+    - "/checkout"
+    - "/login"
+    - "/account"
+
+extract:
+  strategy: product_page
+  part_number:
+    selectors:
+      - "[itemprop=sku]"
+      - ".product-sku"
+      - "#model-number"
+    regex:
+      - "Model\\s*#?\\s*([A-Z0-9][A-Z0-9\\-]+)"
+      - "Part\\s*(?:No\\.?|Number)\\s*:?\\s*([A-Z0-9][A-Z0-9\\-]+)"
+  price:
+    selectors:
+      - "[itemprop=price]"
+      - ".price .amount"
+      - ".product-price"
+    # If a selector targets a meta/data attribute, name it here:
+    # attribute: content
