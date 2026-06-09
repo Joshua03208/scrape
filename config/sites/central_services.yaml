@@ -35,6 +35,10 @@ respect_robots: true
 user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 crawl:
+  # Visit product pages as soon as they're found, before grinding through more
+  # search pagination -- so real data starts landing quickly.
+  priority_link_patterns:
+    - "route=product/product"
   # Follow product detail pages and search pagination only.
   follow_link_patterns:
     - "route=product/product"

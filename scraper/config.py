@@ -53,6 +53,9 @@ class CrawlConfig:
     follow_link_patterns: list[str] = field(default_factory=list)
     # Never follow links matching these (cart, logout, etc.).
     ignore_link_patterns: list[str] = field(default_factory=list)
+    # Links matching these are visited FIRST (e.g. dive into product pages
+    # before churning through more search/listing pagination).
+    priority_link_patterns: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -119,6 +122,7 @@ class SiteConfig:
         crawl = CrawlConfig(
             follow_link_patterns=crawl_raw.get("follow_link_patterns", []),
             ignore_link_patterns=crawl_raw.get("ignore_link_patterns", []),
+            priority_link_patterns=crawl_raw.get("priority_link_patterns", []),
         )
 
         extract_raw = data.get("extract", {}) or {}

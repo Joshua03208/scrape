@@ -117,6 +117,13 @@ class Crawler:
             pages_fetched += 1
             yield result.url, result.html
 
+            priority = self.config.crawl.priority_link_patterns
             for link in self._extract_links(result.url, result.html):
-                if link not in self.seen and self._should_follow(link):
+                if link in self.seen or not self._should_follow(link):
+                    continue
+                # Priority links (e.g. product pages) jump to the front so we
+                # scrape real products before exhausting search pagination.
+                if priority and any(p in link for p in priority):
+                    frontier.appendleft(link)
+                else:
                     frontier.append(link)
