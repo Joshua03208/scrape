@@ -83,6 +83,7 @@ class SiteConfig:
     start_urls: list[str]
     allowed_domains: list[str]
     fetcher: str = "requests"            # "requests" | "playwright"
+    headless: bool = True                # playwright only: run with no visible window
     max_pages: int = 500
     delay_seconds: float = 1.0
     timeout_seconds: float = 30.0
@@ -127,9 +128,9 @@ class SiteConfig:
         )
 
         known = {
-            "name", "start_urls", "allowed_domains", "fetcher", "max_pages",
-            "delay_seconds", "timeout_seconds", "respect_robots", "user_agent",
-            "login", "crawl", "extract",
+            "name", "start_urls", "allowed_domains", "fetcher", "headless",
+            "max_pages", "delay_seconds", "timeout_seconds", "respect_robots",
+            "user_agent", "login", "crawl", "extract",
         }
         scalars = {k: v for k, v in data.items() if k in known and k not in
                    ("login", "crawl", "extract")}

@@ -19,13 +19,17 @@ start_urls:
 allowed_domains:
   - central-servicesuk.co.uk
 
-# Start with the fast static fetcher. If you get 403s or empty pages, switch to
-# playwright (the site may use bot protection or render via JS).
-fetcher: requests
+# This shop has bot protection that returns 503 to the simple fetcher, so we
+# use a real Chrome browser. headless: false opens a visible window, which gets
+# past more aggressive bot-walls (let it sit -- it solves the JS challenge).
+fetcher: playwright
+headless: false
 max_pages: 3000
 delay_seconds: 1.5
 respect_robots: true
-user_agent: "PartPriceBot/0.1 (+https://yourbusiness.example; you@example.com)"
+# A normal browser user-agent so the bot-wall lets us through. (You buy from
+# this supplier; this is just reading their public catalogue with a browser.)
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 crawl:
   # Follow product detail pages and search pagination only.

@@ -129,7 +129,7 @@ def build_fetcher(config: SiteConfig) -> Fetcher:
     if config.fetcher == "requests":
         return RequestsFetcher(config)
     if config.fetcher == "playwright":
-        return PlaywrightFetcher(config)
+        return PlaywrightFetcher(config, headless=config.headless)
     raise ValueError(
         f"Unknown fetcher {config.fetcher!r}. Use 'requests' or 'playwright'."
     )
