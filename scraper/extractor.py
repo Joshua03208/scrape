@@ -121,6 +121,11 @@ class Extractor:
         self.config = config
 
     def extract(self, url: str, html: str) -> list[Record]:
+        # Skip pages we don't want to extract from (e.g. search listings) while
+        # the crawler still uses them to discover product links.
+        patterns = self.config.only_on_url_patterns
+        if patterns and not any(p in url for p in patterns):
+            return []
         soup = BeautifulSoup(html, "lxml")
         if self.config.strategy == "price_table":
             return self._extract_table(url, soup)

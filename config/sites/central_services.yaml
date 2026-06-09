@@ -22,10 +22,13 @@ allowed_domains:
 # This shop has bot protection that returns 503 to the simple fetcher, so we
 # use a real Chrome browser. headless: false opens a visible window, which gets
 # past more aggressive bot-walls (let it sit -- it solves the JS challenge).
+# max_pages counts every page fetched, including the many search-listing pages
+# used only for link discovery -- so set it high enough to also reach all the
+# product pages behind them.
 fetcher: playwright
 headless: false
-max_pages: 3000
-delay_seconds: 1.5
+max_pages: 12000
+delay_seconds: 1.0
 respect_robots: true
 # A normal browser user-agent so the bot-wall lets us through. (You buy from
 # this supplier; this is just reading their public catalogue with a browser.)
@@ -48,6 +51,11 @@ crawl:
 
 extract:
   strategy: product_page
+  # Only pull data from real product pages. Search-listing pages are still
+  # crawled (to find product links) but not scraped -- they list many products
+  # at once and produce noisy, incomplete rows otherwise.
+  only_on_url_patterns:
+    - "route=product/product"
   part_number:
     # OpenCart shows the part number as "Product Code:" (a.k.a. Model).
     regex:

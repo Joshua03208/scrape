@@ -75,6 +75,9 @@ class ExtractConfig:
     row_selector: str | None = None
     part_number_cell: str | None = None
     price_cell: str | None = None
+    # If set, only extract from pages whose URL contains one of these strings.
+    # (e.g. only real product pages, not search/category listings.)
+    only_on_url_patterns: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -125,6 +128,7 @@ class SiteConfig:
             row_selector=extract_raw.get("row_selector"),
             part_number_cell=extract_raw.get("part_number_cell"),
             price_cell=extract_raw.get("price_cell"),
+            only_on_url_patterns=extract_raw.get("only_on_url_patterns", []),
         )
 
         known = {

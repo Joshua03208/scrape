@@ -37,6 +37,20 @@ def test_fallback_skips_empty_basket_total():
     assert rec.price == 14.99
 
 
+def test_only_on_url_patterns_skips_listing_pages():
+    html = "<html><body>Product Code: 133.1 &pound;9.99</body></html>"
+    cfg = ExtractConfig(
+        strategy="product_page",
+        only_on_url_patterns=["route=product/product"],
+        part_number=FieldRule(regex=[r"Product Code:\s*([A-Za-z0-9.\-/]+)"]),
+    )
+    ex = Extractor(cfg)
+    # A search-listing URL is skipped...
+    assert ex.extract("http://x/index.php?route=product/search&page=3", html) == []
+    # ...but a real product page is scraped.
+    assert ex.extract("http://x/index.php?route=product/product&product_id=5", html)
+
+
 def test_opencart_style_product_page():
     # Mimics OpenCart default markup: Product Code line + GBP price.
     html = """
