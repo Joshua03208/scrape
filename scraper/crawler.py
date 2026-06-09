@@ -14,7 +14,9 @@ from __future__ import annotations
 import time
 from collections import deque
 from typing import Iterator
-from urllib.parse import urldefrag, urljoin, urlparse
+from urllib.parse import (
+    parse_qsl, urldefrag, urlencode, urljoin, urlparse, urlunparse,
+)
 from urllib.robotparser import RobotFileParser
 
 from bs4 import BeautifulSoup
@@ -91,6 +93,54 @@ class Crawler:
             links.append(absolute)
         return links
 
+    # -- pagination -------------------------------------------------------
+    def _page_number(self, url: str, param: str) -> int | None:
+        for k, v in parse_qsl(urlparse(url).query):
+            if k == param:
+                try:
+                    return int(v)
+                except ValueError:
+                    return None
+        return None
+
+    def _expand_pagination(self, url: str, links: list[str]) -> list[str]:
+        """For a listing page, synthesise links to every page 1..last.
+
+        A site's pager usually only links to a few nearby pages plus the last
+        one, so plain link-following skips the middle. We read the highest page
+        number visible (including the last-page link) and generate them all.
+        """
+        crawl = self.config.crawl
+        if not crawl.auto_paginate:
+            return []
+        # Only expand on the listing pages themselves.
+        if crawl.follow_link_patterns and not any(
+            p in url for p in crawl.follow_link_patterns
+        ):
+            return []
+        param = crawl.page_param
+
+        # Highest page number among sibling listing links (and this page).
+        candidates = [self._page_number(url, param) or 1]
+        for link in links:
+            if not self._should_follow(link):
+                continue
+            n = self._page_number(link, param)
+            if n:
+                candidates.append(n)
+        last = max(candidates)
+        if last <= 1:
+            return []
+
+        # Rebuild this URL with page=1..last.
+        parsed = urlparse(url)
+        base_pairs = [(k, v) for k, v in parse_qsl(parsed.query) if k != param]
+        out = []
+        for p in range(1, last + 1):
+            query = urlencode(base_pairs + [(param, str(p))])
+            out.append(normalize_url(urlunparse(parsed._replace(query=query))))
+        return out
+
     # -- main loop --------------------------------------------------------
     def crawl(self) -> Iterator[tuple[str, str]]:
         """Yield ``(url, html)`` for every successfully fetched page."""
@@ -118,7 +168,11 @@ class Crawler:
             yield result.url, result.html
 
             priority = self.config.crawl.priority_link_patterns
-            for link in self._extract_links(result.url, result.html):
+            page_links = self._extract_links(result.url, result.html)
+            # Make sure every listing page (1..last) gets queued, not just the
+            # few a pager happens to link to.
+            page_links += self._expand_pagination(result.url, page_links)
+            for link in page_links:
                 if link in self.seen or not self._should_follow(link):
                     continue
                 # Priority links (e.g. product pages) jump to the front so we

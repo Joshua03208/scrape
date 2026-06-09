@@ -28,13 +28,17 @@ allowed_domains:
 fetcher: playwright
 headless: false
 max_pages: 12000
-delay_seconds: 1.0
+delay_seconds: 0.3
 respect_robots: true
 # A normal browser user-agent so the bot-wall lets us through. (You buy from
 # this supplier; this is just reading their public catalogue with a browser.)
 user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 crawl:
+  # Walk EVERY search page (1..last), not just the few the pager links to,
+  # so no products in the middle pages are missed.
+  auto_paginate: true
+  page_param: page
   # Visit product pages as soon as they're found, before grinding through more
   # search pagination -- so real data starts landing quickly.
   priority_link_patterns:

@@ -107,10 +107,14 @@ class PlaywrightFetcher(Fetcher):
             resp = self._page.goto(
                 url, timeout=self.config.timeout_seconds * 1000, wait_until="domcontentloaded"
             )
-            # Give late-loading prices a moment to appear.
-            self._page.wait_for_load_state("networkidle", timeout=5000)
         except Exception:
             return FetchResult(url=url, status=0, html="", ok=False)
+        # Best-effort settle for late-loading content -- but never drop a page
+        # just because it didn't go fully idle in time.
+        try:
+            self._page.wait_for_load_state("networkidle", timeout=1500)
+        except Exception:
+            pass
         status = resp.status if resp else 0
         html = self._page.content()
         ok = bool(resp and resp.ok)

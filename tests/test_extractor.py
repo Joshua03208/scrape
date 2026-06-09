@@ -4,6 +4,30 @@ from scraper.config import ExtractConfig, FieldRule
 from scraper.extractor import Extractor, _clean_price
 
 
+def test_auto_pagination_fills_in_missing_pages():
+    from scraper.config import SiteConfig
+    from scraper.crawler import Crawler
+
+    cfg = SiteConfig(
+        name="t", start_urls=["http://x/list?search=133.&page=1"],
+        allowed_domains=["x"],
+    )
+    cfg.crawl.follow_link_patterns = ["list"]
+    cfg.crawl.auto_paginate = True
+    crawler = Crawler(cfg, fetcher=None)  # no network needed for this method
+    # The page only links to a couple of nearby pages plus the last (111).
+    url = "http://x/list?search=133.&page=1"
+    links = [
+        "http://x/list?search=133.&page=2",
+        "http://x/list?search=133.&page=111",
+    ]
+    expanded = crawler._expand_pagination(url, links)
+    # Every page 1..111 should be generated, including the gaps (e.g. 57).
+    assert "http://x/list?search=133.&page=57" in expanded
+    assert "http://x/list?search=133.&page=111" in expanded
+    assert len([u for u in expanded if "page=" in u]) == 111
+
+
 def test_clean_price_variants():
     amount, _raw, ccy = _clean_price("$1,234.56")
     assert (amount, ccy) == (1234.56, "USD")

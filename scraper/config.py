@@ -56,6 +56,10 @@ class CrawlConfig:
     # Links matching these are visited FIRST (e.g. dive into product pages
     # before churning through more search/listing pagination).
     priority_link_patterns: list[str] = field(default_factory=list)
+    # Auto-pagination: when on a listing page, synthesise links for *every*
+    # page (1..last) so we don't miss the middle pages a pager hides.
+    auto_paginate: bool = False
+    page_param: str = "page"
 
 
 @dataclass
@@ -123,6 +127,8 @@ class SiteConfig:
             follow_link_patterns=crawl_raw.get("follow_link_patterns", []),
             ignore_link_patterns=crawl_raw.get("ignore_link_patterns", []),
             priority_link_patterns=crawl_raw.get("priority_link_patterns", []),
+            auto_paginate=crawl_raw.get("auto_paginate", False),
+            page_param=crawl_raw.get("page_param", "page"),
         )
 
         extract_raw = data.get("extract", {}) or {}
