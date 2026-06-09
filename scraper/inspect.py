@@ -130,6 +130,31 @@ _BROWSER_UA = (
 )
 
 
+def _description_candidates(soup: BeautifulSoup) -> list[Candidate]:
+    """Find likely product-description containers."""
+    out: list[Candidate] = []
+    seen: set[str] = set()
+    for el in soup.find_all(True):
+        idc = (el.get("id") or "") + " " + " ".join(el.get("class") or [])
+        idc = idc.lower()
+        is_desc = (
+            "description" in idc
+            or "tab-content" in idc
+            or el.get("itemprop") == "description"
+        )
+        if not is_desc:
+            continue
+        text = el.get_text(" ", strip=True)
+        if len(text) < 15:  # skip empty/label-only containers
+            continue
+        sel = _css_selector(el)
+        if sel in seen:
+            continue
+        seen.add(sel)
+        out.append(Candidate(sel, text[:160] + ("…" if len(text) > 160 else "")))
+    return out[:15]
+
+
 def inspect_url(url: str, use_playwright: bool = False) -> None:
     # Use a normal browser identity + a visible window so the inspector can get
     # past the same bot-walls the real crawl does.
@@ -168,5 +193,10 @@ def inspect_url(url: str, use_playwright: bool = False) -> None:
         print(f"  {c.selector:<40}  {c.text}")
     print()
 
-    print("Next: copy the best price + part selectors into a "
+    print("DESCRIPTION candidates (selector  ->  text):")
+    for c in _description_candidates(soup):
+        print(f"  {c.selector:<40}  {c.text}")
+    print()
+
+    print("Next: copy the best price + part + description selectors into a "
           "config/sites/<name>.yaml under extract:.")
