@@ -24,9 +24,11 @@ CREATE TABLE IF NOT EXISTS prices (
     price        REAL    NOT NULL,
     currency     TEXT    NOT NULL DEFAULT 'USD',
     raw_price    TEXT,
+    description  TEXT,
     url          TEXT    NOT NULL,
     scraped_at   TEXT    NOT NULL,
-    UNIQUE(site, part_number, url)
+    -- One row per part: re-scraping the same part updates it in place.
+    UNIQUE(site, part_number)
 );
 CREATE INDEX IF NOT EXISTS idx_prices_part ON prices(part_number);
 CREATE INDEX IF NOT EXISTS idx_prices_site ON prices(site);
@@ -46,21 +48,25 @@ class Storage:
         """Upsert records; returns how many rows were written/updated."""
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
         rows = [
-            (site, r.part_number, r.price, r.currency, r.raw_price, r.url, now)
+            (site, r.part_number, r.price, r.currency, r.raw_price,
+             r.description, r.url, now)
             for r in records
         ]
         if not rows:
             return 0
-        # Latest scrape wins for a given (site, part_number, url).
+        # Latest scrape wins for a given (site, part_number).
         self.conn.executemany(
             """
             INSERT INTO prices
-                (site, part_number, price, currency, raw_price, url, scraped_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(site, part_number, url) DO UPDATE SET
+                (site, part_number, price, currency, raw_price,
+                 description, url, scraped_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(site, part_number) DO UPDATE SET
                 price=excluded.price,
                 currency=excluded.currency,
                 raw_price=excluded.raw_price,
+                description=excluded.description,
+                url=excluded.url,
                 scraped_at=excluded.scraped_at
             """,
             rows,
@@ -70,7 +76,8 @@ class Storage:
 
     def all_rows(self) -> list[sqlite3.Row]:
         cur = self.conn.execute(
-            "SELECT site, part_number, price, currency, raw_price, url, scraped_at "
+            "SELECT site, part_number, price, currency, raw_price, "
+            "description, url, scraped_at "
             "FROM prices ORDER BY site, part_number"
         )
         return cur.fetchall()
@@ -83,7 +90,7 @@ class Storage:
             writer = csv.writer(fh)
             writer.writerow(
                 ["site", "part_number", "price", "currency", "raw_price",
-                 "url", "scraped_at"]
+                 "description", "url", "scraped_at"]
             )
             for r in rows:
                 writer.writerow([r[k] for k in r.keys()])

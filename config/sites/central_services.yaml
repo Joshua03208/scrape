@@ -69,3 +69,10 @@ extract:
       - "ul.list-unstyled .price-new"
       - "#product .price"
       - "h2.price-new"
+  description:
+    # OpenCart puts the product description in the "Description" tab.
+    selectors:
+      - "#tab-description"
+      - "#tab-description .tab-content"
+      - "[itemprop=description]"
+      - ".product-description"

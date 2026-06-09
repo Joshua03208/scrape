@@ -77,7 +77,7 @@ PAGE = """
 <table>
   <thead>
     <tr><th>Site</th><th>Part #</th><th class="price">Price</th>
-        <th>Source</th><th>Scraped</th></tr>
+        <th>Description</th><th>Source</th><th>Scraped</th></tr>
   </thead>
   <tbody>
     {% for r in rows %}
@@ -85,11 +85,12 @@ PAGE = """
       <td>{{ r.site }}</td>
       <td>{{ r.part_number }}</td>
       <td class="price">{{ "%.2f"|format(r.price) }} {{ r.currency }}</td>
+      <td title="{{ r.description }}">{{ (r.description or '')[:90] }}{% if r.description and r.description|length > 90 %}…{% endif %}</td>
       <td><a href="{{ r.url }}" target="_blank" rel="noopener">link</a></td>
       <td class="muted">{{ r.scraped_at }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="muted">No results yet. Run a scrape to populate.</td></tr>
+    <tr><td colspan="6" class="muted">No results yet. Run a scrape to populate.</td></tr>
     {% endfor %}
   </tbody>
 </table>

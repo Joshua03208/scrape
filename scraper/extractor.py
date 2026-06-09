@@ -42,6 +42,7 @@ class Record:
     price: float
     currency: str = "USD"
     raw_price: str = ""
+    description: str = ""
 
 
 def _clean_price(text: str, default_currency: str = "USD") -> tuple[float, str, str] | None:
@@ -95,6 +96,14 @@ def _find_part_number(node: Tag, page_text: str, rule: FieldRule) -> str | None:
     return m.group(1) if m else None
 
 
+def _find_description(node: Tag, page_text: str, rule: FieldRule) -> str:
+    val = _field_from_selectors(node, rule)
+    if val:
+        return val
+    val = _field_from_regex(page_text, rule)
+    return val or ""
+
+
 def _find_price(node: Tag, page_text: str, rule: FieldRule) -> tuple[float, str, str] | None:
     val = _field_from_selectors(node, rule)
     if val:
@@ -138,8 +147,9 @@ class Extractor:
         if not part or not price:
             return []
         amount, raw, currency = price
+        desc = _find_description(soup, page_text, self.config.description)
         return [Record(url=url, part_number=part, price=amount,
-                       currency=currency, raw_price=raw)]
+                       currency=currency, raw_price=raw, description=desc)]
 
     def _extract_table(self, url: str, soup: BeautifulSoup) -> list[Record]:
         cfg = self.config

@@ -77,6 +77,24 @@ def test_opencart_style_product_page():
     assert rec.currency == "GBP"
 
 
+def test_description_is_extracted():
+    html = """
+    <html><body>
+      <p>Product Code: 133.999</p>
+      <div class="product-info"><span class="price">&pound;5.00</span></div>
+      <div id="tab-description">Genuine Triton solenoid valve, 230V.</div>
+    </body></html>
+    """
+    cfg = ExtractConfig(
+        strategy="product_page",
+        part_number=FieldRule(regex=[r"Product Code:\s*([A-Za-z0-9.\-/]+)"]),
+        price=FieldRule(selectors=[".product-info .price"]),
+        description=FieldRule(selectors=["#tab-description"]),
+    )
+    rec = Extractor(cfg).extract("http://x/p", html)[0]
+    assert rec.description == "Genuine Triton solenoid valve, 230V."
+
+
 def test_product_page_selectors():
     html = """
     <html><body>

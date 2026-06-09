@@ -71,6 +71,7 @@ class ExtractConfig:
     strategy: str = "product_page"
     part_number: FieldRule = field(default_factory=FieldRule)
     price: FieldRule = field(default_factory=FieldRule)
+    description: FieldRule = field(default_factory=FieldRule)
     # price_table strategy only:
     row_selector: str | None = None
     part_number_cell: str | None = None
@@ -125,6 +126,7 @@ class SiteConfig:
             strategy=extract_raw.get("strategy", "product_page"),
             part_number=FieldRule(**(extract_raw.get("part_number", {}) or {})),
             price=FieldRule(**(extract_raw.get("price", {}) or {})),
+            description=FieldRule(**(extract_raw.get("description", {}) or {})),
             row_selector=extract_raw.get("row_selector"),
             part_number_cell=extract_raw.get("part_number_cell"),
             price_cell=extract_raw.get("price_cell"),
